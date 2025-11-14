@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MAPD Note Template (SunFire + MARx + Core JSON)</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 30px;
+    background-color: #000;
+    color: #fff;
+  }
+  h2, h3 { color: #fff; }
+  form {
+    background: #111;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(255,255,255,0.1);
+    max-width: 650px;
+  }
+  label {
+    display: block;
+    margin-top: 10px;
+    font-weight: bold;
+    color: #ddd;
+  }
+  input[type="text"], input[type="date"], textarea, select {
+    width: 100%;
+    padding: 8px;
+    margin-top: 4px;
+    background-color: #222;
+    color: #fff;
+    border: 1px solid #444;
+    border-radius: 4px;
+    font-size: 14px;
+  }
+  textarea { resize: vertical; height: 90px; }
+  input::placeholder, textarea::placeholder { color: #888; }
+  .btn-primary {
+    margin-top: 15px;
+    padding: 8px 14px;
+    font-size: 14px;
+    cursor: pointer;
+    border: none;
+    border-radius: 4px;
+    background-color: #007bff;
+    color: #fff;
+  }
+  .btn-secondary {
+    margin-top: 10px;
+    padding: 6px 12px;
+    background: #4b5563;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  #outputBox, #jsonViewBox {
+    margin-top: 25px;
+    max-width: 650px;
+    background: #111;
+    border-radius: 8px;
+    border: 1px solid #333;
+    padding: 15px 18px;
+    box-shadow: 0 2px 6px rgba(255,255,255,0.1);
+    white-space: pre-line;
+    color: #fff;
+  }
+  .output-line { margin-bottom: 0; }
+  .muted { color: #aaa; font-style: italic; }
+  .upload-row { margin-bottom: 15px; }
+  input[type="file"] {
+    margin-top: 6px;
+    background: #000;
+    color: #fff;
+    border: none;
+  }
+  .divider {
+    border-top: 1px solid #333;
+    margin: 6px 0 4px;
+  }
+  .toolbar {
+    margin-top: 10px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  #jsonView {
+    background: #000;
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 10px;
+    white-space: pre;
+    overflow-x: auto;
+    font-family: Consolas, monospace;
+    font-size: 12px;
+  }
+</style>
+</head>
+<body>
+
+<h2>MAPD Note Template</h2>
+
+<!-- PDF IMPORTS -->
+<div class="upload-row">
+  <label for="enrollPdf">📁 Import Enrollment / SunFire PDF:</label>
+  <input type="file" id="enrollPdf" accept="application/pdf">
+</div>
+<div class="upload-row">
+  <label for="marxPdf">📁 Import MARx / Eligibility PDF (pull Old Plan):</label>
+  <input type="file" id="marxPdf" accept="application/pdf">
+</div>
+
+<form id="mapdForm">
+  <label>Client Name:</label>
+  <input type="text" name="clientName" placeholder="John Smith">
+
+  <label>Personal Code:</label>
+  <input type="text" name="personalCode" placeholder="Agent / internal code">
+
+  <label>Enrollment Confirmation:</label>
+  <input type="text" name="enrollmentConfirmation" placeholder="Confirmation / App ID">
+
+  <label>Medicare #:</label>
+  <input type="text" name="medicareNumber" placeholder="MBI">
+
+  <label>Part A:</label>
+  <input type="text" name="partA" placeholder="MM/DD/YYYY">
+
+  <label>Part B:</label>
+  <input type="text" name="partB" placeholder="MM/DD/YYYY">
+
+  <label>SEP:</label>
+  <input type="text" name="sep" value="AEP" readonly>
+
+  <label>Old Plan:</label>
+  <input type="text" name="oldPlan" placeholder="H2117-002">
+
+  <label>New Plan Name:</label>
+  <input type="text" name="newPlanName" placeholder="e.g. Humana Dual Integrated (HMO D-SNP)">
+
+  <label>New Plan:</label>
+  <input type="text" name="newPlan" placeholder="Plan ID / Contract-PBP e.g. H1234-001-000">
+
+  <label>Medicaid Level:</label>
+  <select name="medicaidLevel" id="medicaidLevel">
+    <option value="">-- Select Medicaid Level --</option>
+    <option value="Full Medicaid">Full Medicaid</option>
+    <option value="QMB">QMB</option>
+    <option value="QMB+">QMB+</option>
+    <option value="SLMB">SLMB</option>
+    <option value="SLMB+">SLMB+</option>
+    <option value="QI">QI</option>
+    <option value="FBDE">FBDE</option>
+    <option value="D-SNP">D-SNP</option>
+    <option value="QDWI">QDWI</option>
+    <option value="None">None</option>
+  </select>
+
+  <label>Medicaid #:</label>
+  <input type="text" name="medicaidNumber">
+
+  <label>PCP Name:</label>
+  <input type="text" name="pcpName">
+
+  <label>PCP Code:</label>
+  <input type="text" name="pcpCode">
+
+  <label>Birth Date:</label>
+  <input type="date" name="birthDate">
+
+  <label>Why:</label>
+  <input type="text" name="why" placeholder="Why change / why enroll">
+
+  <label>Relevant Notes:</label>
+  <textarea name="relevantNotes" placeholder="Notes about AOR, household, meds, eff date, etc."></textarea>
+
+  <div class="toolbar">
+    <button type="button" class="btn-primary" onclick="showNotes()">Show Notes</button>
+    <!-- changed this one 👇 -->
+    <button type="button" class="btn-secondary" onclick="copyCaseJson()">Copy Case JSON</button>
+    <label class="btn-secondary" style="display:inline-block;cursor:pointer;">
+      Upload Case
+      <input type="file" id="caseUpload" accept="application/json" style="display:none;">
+    </label>
+    <button type="button" class="btn-secondary" onclick="buildCoreJson()">Show Core JSON</button>
+  </div>
+</form>
+
+<!-- CORE POLICY DETAILS -->
+<h3 style="margin-top:30px;">Core Policy Details (Onyx-style)</h3>
+<form id="coreForm" style="max-width:650px;background:#111;padding:15px;border-radius:8px;">
+  <label>Enrollment Platform:</label>
+  <select name="enrollmentPlatform">
+    <option value="SunFire">SunFire</option>
+    <option value="Connecture">Connecture</option>
+    <option value="Other">Other</option>
+  </select>
+
+  <label>SunFire Enrollment Code:</label>
+  <input type="text" name="sunfireCode" placeholder="Enter SunFire enrollment code">
+
+  <label>Medicare Number (MBI):</label>
+  <input type="text" name="coreMbi" placeholder="Enter MBI">
+
+  <label>Carrier Name:</label>
+  <input type="text" name="carrierName" placeholder="Humana / Wellcare / Aetna ...">
+
+  <label>Product Type:</label>
+  <input type="text" name="productType" placeholder="MAPD / MA-Only / PDP / D-SNP">
+
+  <label>New Plan Name:</label>
+  <input type="text" name="coreNewPlanName" placeholder="Same as above if MAPD">
+
+  <label>Plan Effective Date:</label>
+  <input type="date" name="planEffDate">
+
+  <label>New Plan Code:</label>
+  <input type="text" name="coreNewPlanCode" placeholder="H1234-001-000">
+
+  <label>Old Plan Code:</label>
+  <input type="text" name="coreOldPlanCode" placeholder="H2117-002">
+
+  <label>Enrollment Period / SEP Code:</label>
+  <input type="text" name="coreSep" placeholder="AEP / LIS / MDE / SEP ...">
+</form>
+
+<div id="outputBox">
+  <h3>Saved MAPD Notes</h3>
+  <p class="muted">Fill the form or import PDFs, then click “Show Notes”.</p>
+</div>
+<button type="button" class="btn-secondary" onclick="copyNotes()">Copy Notes</button>
+
+<!-- JSON VIEW -->
+<div id="jsonViewBox">
+  <h3>Core Policy JSON</h3>
+  <pre id="jsonView">{}</pre>
+  <!-- if you ALSO want a direct copy of what’s shown here, add this: -->
+  <button type="button" class="btn-secondary" onclick="copyJsonView()">Copy JSON</button>
+</div>
+
+<!-- pdf.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+  const enrollInput = document.getElementById('enrollPdf');
+  const marxInput   = document.getElementById('marxPdf');
+  const caseUpload  = document.getElementById('caseUpload');
+
+  enrollInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const text = await readPdfText(file);
+    fillFromEnrollmentPdf(text);
+  });
+
+  marxInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const text = await readPdfText(file);
+    fillFromMarxPdf(text);
+  });
+
+  caseUpload.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const text = await file.text();
+    try {
+      const data = JSON.parse(text);
+      loadCase(data);
+    } catch (err) {
+      alert("Could not read case file.");
+    }
+  });
+
+  async function readPdfText(file) {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let fullText = "";
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      const strings = content.items.map(item => item.str);
+      fullText += strings.join(" ") + "\n";
+    }
+    return fullText;
+  }
+
+  // ---- ENROLLMENT PDF PARSE ----
+  function fillFromEnrollmentPdf(text) {
+    text = text.replace(/\s+/g, " ").trim();
+
+    function firstMatch(patterns) {
+      for (const re of patterns) {
+        const m = text.match(re);
+        if (m) return m[1].trim();
+      }
+      return "";
+    }
+
+    const firstName = firstMatch([
+      /First name\s+([A-Z][a-zA-Z"'\-]+)/i,
+      /First Name\s+([A-Z][a-zA-Z"'\-]+)/i
+    ]);
+    const lastName = firstMatch([
+      /Last name\s+([A-Z][a-zA-Z"'\-]+)/i,
+      /Last Name\s+([A-Z][a-zA-Z"'\-]+)/i
+    ]);
+
+    let clientName = firstMatch([
+      /Client Name[:\s]+([A-Z ,.'-]+?)(?:\s+(?:We'?re|We|I|You)\b|$)/i,
+      /Member Name[:\s]+([A-Z ,.'-]+?)(?:\s+(?:We'?re|We|I|You)\b|$)/i
+    ]);
+    if (!clientName && (firstName || lastName)) {
+      clientName = [firstName, lastName].filter(Boolean).join(" ");
+    }
+
+    const dob = firstMatch([
+      /Date of birth\s+([0-9/.-]+)/i,
+      /DOB[:\s]+([0-9/.-]+)/i
+    ]);
+
+    const medicare = firstMatch([
+      /Medicare number\s+([A-Z0-9]+)/i,
+      /Medicare #\s+([A-Z0-9]+)/i,
+      /MBI[:\s]+([A-Z0-9]+)/i
+    ]);
+
+    const partA = firstMatch([
+      /Part A effective date\s+([0-9/.-]+)/i,
+      /Part A:\s+([0-9/.-]+)/i
+    ]);
+    const partB = firstMatch([
+      /Part B effective date\s+([0-9/.-]+)/i,
+      /Part B:\s+([0-9/.-]+)/i
+    ]);
+
+    const election = firstMatch([
+      /Election period\s+([A-Z\-]+)/i,
+      /Enrollment period\s+([A-Z\-]+)/i,
+      /Election Period Type[:\s]+([A-Z\-]+)/i
+    ]) || "AEP";
+
+    let planName = firstMatch([
+      /Plan name\s+(.+?)\s+(Monthly premium|Contract|Premium|Represents|Enrollment)/i,
+      /Product name\s+(.+?)\s+(Monthly premium|Contract|Premium|Represents|Enrollment)/i
+    ]);
+
+    let planId = "";
+    const planIdMatch = planName && planName.match(/(H\d{4}-\d{3}-\d{3}|S\d{4}-\d{3}-\d{3})/i);
+    if (planIdMatch) {
+      planId = planIdMatch[1];
+      planName = planName.replace(planId, "").trim();
+    } else {
+      planId = firstMatch([
+        /(H\d{4}-\d{3}-\d{3})/i,
+        /(S\d{4}-\d{3}-\d{3})/i
+      ]);
+    }
+
+    const pcpName = firstMatch([
+      /PCP name[:\s]+(.+?)(?:\s+Are you|\s+Yes|\s+No|$)/i,
+      /PCP Name[:\s]+(.+?)(?:\s+Are you|\s+Yes|\s+No|$)/i,
+      /Primary Care Provider Name[:\s]+(.+?)(?:\s+Are you|\s+Yes|\s+No|$)/i
+    ]);
+
+    let pcpId = firstMatch([
+      /PCP ID[:\s#-]*([A-Za-z0-9-]+)/i,
+      /PCP Provider ID[:\s#-]*([A-Za-z0-9-]+)/i,
+      /Primary Care Provider ID[:\s#-]*([A-Za-z0-9-]+)/i,
+      /PCP\s*#[:\s]*([A-Za-z0-9-]+)/i,
+      /PCP Code[:\s]*([A-Za-z0-9-]+)/i
+    ]);
+    if (!pcpId) {
+      const fb = text.match(/PCP ID\s+([A-Za-z0-9-]+)\s+PCP name/i);
+      if (fb) pcpId = fb[1].trim();
+    }
+
+    const medicaidNum = firstMatch([
+      /Medicaid number\s+([0-9A-Z]+)/i,
+      /Medicaid ID[:\s]+([0-9A-Z]+)/i
+    ]);
+
+    const proposedEff = firstMatch([
+      /proposed effective date\s+([0-9/.-]+)/i,
+      /Effective Date[:\s]+([0-9/.-]+)/i
+    ]);
+
+    // NEW: enrollment code
+    const enrollmentCode = firstMatch([
+      /Enrollment code\s+([A-Z0-9\-]+)/i,
+      /Confirmation #[:\s]+([A-Z0-9\-]+)/i,
+      /Application ID[:\s]+([A-Z0-9\-]+)/i
+    ]);
+
+    const form = document.getElementById('mapdForm');
+
+    form.clientName.value = clientName;
+    form.enrollmentConfirmation.value = enrollmentCode;
+    form.medicareNumber.value = medicare;
+    form.partA.value = partA;
+    form.partB.value = partB;
+    form.sep.value = election;
+    form.newPlanName.value = planName;
+    form.newPlan.value = planId;
+    form.medicaidNumber.value = medicaidNum;
+    form.pcpName.value = pcpName;
+    form.pcpCode.value = pcpId;
+    form.birthDate.value = toDateInput(dob);
+
+    // auto D-SNP
+    const medicaidSelect = document.getElementById('medicaidLevel');
+    if (/D-SNP|Dual Integrated|Dual Eligible/i.test(text)) {
+      medicaidSelect.value = "D-SNP";
+    }
+
+    if (proposedEff) {
+      form.relevantNotes.value =
+        (form.relevantNotes.value ? form.relevantNotes.value + "\n" : "") +
+        "Proposed Effective Date: " + proposedEff;
+    }
+
+    // ALSO push into core panel
+    const core = document.getElementById('coreForm');
+    if (core) {
+      if (!core.sunfireCode.value) core.sunfireCode.value = enrollmentCode || "";
+      if (!core.coreMbi.value) core.coreMbi.value = medicare || "";
+      if (!core.coreNewPlanName.value) core.coreNewPlanName.value = planName || "";
+      if (!core.coreNewPlanCode.value) core.coreNewPlanCode.value = planId || "";
+      if (!core.coreSep.value) core.coreSep.value = election || "";
+    }
+
+    showNotes();
+    buildCoreJson();
+  }
+
+  // ---- MARx PDF PARSE ----
+  function fillFromMarxPdf(text) {
+    text = text.replace(/\s+/g, " ").trim();
+    const form = document.getElementById('mapdForm');
+
+    const planLineRegex =
+      /((?:H|S)\d{4})\s+(\d{3})\s+\d{2,3}\s*-\s*([A-Za-z0-9 ().\/\-]+?)\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{2}\/\d{2}\/\d{4})/g;
+
+    const found = [];
+    let m;
+    while ((m = planLineRegex.exec(text)) !== null) {
+      found.push({
+        contract: m[1],
+        pbp: m[2],
+        desc: m[3].trim(),
+        start: m[4],
+        end: m[5]
+      });
+    }
+
+    if (!found.length) {
+      form.relevantNotes.value =
+        (form.relevantNotes.value ? form.relevantNotes.value + "\n" : "") +
+        "⚠ No enrollment rows found in MARx PDF — enter old plan manually.";
+      showNotes();
+      return;
+    }
+
+    let best = found.find(p => p.end === "12/31/2025");
+    if (!best) {
+      best = found.sort((a, b) => toDate(b.end) - toDate(a.end))[0];
+    }
+
+    const codeOnly = `${best.contract}-${best.pbp}`;
+    form.oldPlan.value = codeOnly;
+    form.relevantNotes.value =
+      (form.relevantNotes.value ? form.relevantNotes.value + "\n" : "") +
+      "Old plan detected from MARx: " + codeOnly;
+
+    // also pre-fill in core panel
+    const core = document.getElementById('coreForm');
+    if (core && !core.coreOldPlanCode.value) {
+      core.coreOldPlanCode.value = codeOnly;
+    }
+
+    showNotes();
+    buildCoreJson();
+  }
+
+  function toDateInput(val) {
+    if (!val) return "";
+    const parts = val.split(/[\/.-]/);
+    if (parts.length !== 3) return "";
+    const [mm, dd, yyyy] = parts;
+    return `${yyyy}-${mm.padStart(2,"0")}-${dd.padStart(2,"0")}`;
+  }
+
+  function toDate(str) {
+    const [mm, dd, yyyy] = str.split("/");
+    return new Date(+yyyy, +mm - 1, +dd);
+  }
+
+  function getFormData() {
+    const form = document.getElementById('mapdForm');
+    return {
+      clientName: form.clientName.value,
+      personalCode: form.personalCode.value,
+      enrollmentConfirmation: form.enrollmentConfirmation.value,
+      medicareNumber: form.medicareNumber.value,
+      partA: form.partA.value,
+      partB: form.partB.value,
+      sep: form.sep.value,
+      oldPlan: form.oldPlan.value,
+      newPlanName: form.newPlanName.value,
+      newPlan: form.newPlan.value,
+      medicaidLevel: form.medicaidLevel.value,
+      medicaidNumber: form.medicaidNumber.value,
+      pcpName: form.pcpName.value,
+      pcpCode: form.pcpCode.value,
+      birthDate: form.birthDate.value,
+      why: form.why.value,
+      relevantNotes: form.relevantNotes.value,
+    };
+  }
+
+  function loadCase(data) {
+    const form = document.getElementById('mapdForm');
+    form.clientName.value = data.clientName || "";
+    form.personalCode.value = data.personalCode || "";
+    form.enrollmentConfirmation.value = data.enrollmentConfirmation || "";
+    form.medicareNumber.value = data.medicareNumber || "";
+    form.partA.value = data.partA || "";
+    form.partB.value = data.partB || "";
+    form.sep.value = data.sep || "AEP";
+    form.oldPlan.value = data.oldPlan || "";
+    form.newPlanName.value = data.newPlanName || "";
+    form.newPlan.value = data.newPlan || "";
+    form.medicaidLevel.value = data.medicaidLevel || "";
+    form.medicaidNumber.value = data.medicaidNumber || "";
+    form.pcpName.value = data.pcpName || "";
+    form.pcpCode.value = data.pcpCode || "";
+    form.birthDate.value = data.birthDate || "";
+    form.why.value = data.why || "";
+    form.relevantNotes.value = data.relevantNotes || "";
+
+    // load core policy if in file
+    if (data.corePolicy) {
+      const c = document.getElementById('coreForm');
+      c.enrollmentPlatform.value = data.corePolicy.enrollmentPlatform || "SunFire";
+      c.sunfireCode.value = data.corePolicy.sunfireEnrollmentCode || "";
+      c.coreMbi.value = data.corePolicy.medicareNumber || "";
+      c.carrierName.value = data.corePolicy.carrierName || "";
+      c.productType.value = data.corePolicy.productType || "";
+      c.coreNewPlanName.value = data.corePolicy.newPlanName || "";
+      c.planEffDate.value = data.corePolicy.planEffectiveDate || "";
+      c.coreNewPlanCode.value = data.corePolicy.newPlanCode || "";
+      c.coreOldPlanCode.value = data.corePolicy.oldPlanCode || "";
+      c.coreSep.value = data.corePolicy.enrollmentPeriodCode || "";
+    }
+
+    showNotes();
+    buildCoreJson();
+  }
+
+  // NEW: copy case json instead of download
+  function copyCaseJson() {
+    const data = getFormData();
+    data.corePolicy = getCorePolicyData();
+    const jsonText = JSON.stringify(data, null, 2);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(jsonText)
+        .then(() => alert('Case JSON copied to clipboard.'))
+        .catch(() => fallbackCopy(jsonText));
+    } else {
+      fallbackCopy(jsonText);
+    }
+  }
+
+  function showNotes() {
+    const data = getFormData();
+    const output = document.getElementById('outputBox');
+    output.innerHTML = `
+      <h3>Saved MAPD Notes</h3>
+      <div class="output-line"><strong>Client Name:</strong> ${data.clientName || ''}</div>
+      <div class="output-line"><strong>Personal Code:</strong> ${data.personalCode || ''}</div>
+      <div class="output-line"><strong>Enrollment Confirmation:</strong> ${data.enrollmentConfirmation || ''}</div>
+      <div class="output-line"><strong>Medicare #:</strong> ${data.medicareNumber || ''}</div>
+      <div class="output-line"><strong>Part A:</strong> ${data.partA || ''}</div>
+      <div class="output-line"><strong>Part B:</strong> ${data.partB || ''}</div>
+      <div class="output-line"><strong>SEP:</strong> ${data.sep || ''}</div>
+      <div class="output-line"><strong>Old Plan:</strong> ${data.oldPlan || ''}</div>
+      <div class="output-line"><strong>New Plan Name:</strong> ${data.newPlanName || ''}</div>
+      <div class="output-line"><strong>New Plan:</strong> ${data.newPlan || ''}</div>
+      <div class="output-line"><strong>Medicaid Level:</strong> ${data.medicaidLevel || ''}</div>
+      <div class="output-line"><strong>Medicaid #:</strong> ${data.medicaidNumber || ''}</div>
+      <div class="output-line"><strong>PCP Name:</strong> ${data.pcpName || ''}</div>
+      <div class="output-line"><strong>PCP Code:</strong> ${data.pcpCode || ''}</div>
+      <div class="output-line"><strong>Birth Date:</strong> ${data.birthDate || ''}</div>
+      <div class="output-line"><strong>Why:</strong> ${data.why || ''}</div>
+      <div class="divider"></div>
+      <div class="output-line"><strong>Relevant Notes:</strong> ${data.relevantNotes || ''}</div>
+    `;
+  }
+
+  function copyNotes() {
+    const output = document.getElementById('outputBox').innerText;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(output)
+        .then(() => alert('Notes copied to clipboard.'))
+        .catch(() => fallbackCopy(output));
+    } else {
+      fallbackCopy(output);
+    }
+  }
+
+  // optional: copy whatever is in the JSON view box
+  function copyJsonView() {
+    const jsonText = document.getElementById('jsonView').innerText;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(jsonText)
+        .then(() => alert('JSON copied to clipboard.'))
+        .catch(() => fallbackCopy(jsonText));
+    } else {
+      fallbackCopy(jsonText);
+    }
+  }
+
+  function fallbackCopy(text) {
+    const temp = document.createElement('textarea');
+    temp.value = text;
+    document.body.appendChild(temp);
+    temp.select();
+    document.execCommand('copy');
+    document.body.removeChild(temp);
+    alert('Copied to clipboard.');
+  }
+
+  // ---- CORE POLICY JSON BUILDER ----
+  function getCorePolicyData() {
+    const core = document.getElementById('coreForm');
+    return {
+      enrollmentPlatform: core.enrollmentPlatform.value || "SunFire",
+      sunfireEnrollmentCode: core.sunfireCode.value || "",
+      medicareNumber: core.coreMbi.value || "",
+      carrierName: core.carrierName.value || "",
+      productType: core.productType.value || "",
+      newPlanName: core.coreNewPlanName.value || "",
+      planEffectiveDate: core.planEffDate.value || "",
+      newPlanCode: core.coreNewPlanCode.value || "",
+      oldPlanCode: core.coreOldPlanCode.value || "",
+      enrollmentPeriodCode: core.coreSep.value || ""
+    };
+  }
+
+  // UPDATED: output your 5-key JSON (using form first, then defaults)
+  function buildCoreJson() {
+    const mapd = getFormData();
+    const core = document.getElementById('coreForm');
+
+    // auto-fill blanks from MAPD
+    if (!core.sunfireCode.value) core.sunfireCode.value = mapd.enrollmentConfirmation || "";
+    if (!core.coreMbi.value) core.coreMbi.value = mapd.medicareNumber || "";
+    if (!core.coreNewPlanName.value) core.coreNewPlanName.value = mapd.newPlanName || "";
+    if (!core.coreNewPlanCode.value) core.coreNewPlanCode.value = mapd.newPlan || "";
+    if (!core.coreOldPlanCode.value) core.coreOldPlanCode.value = mapd.oldPlan || "";
+    if (!core.coreSep.value) core.coreSep.value = mapd.sep || "";
+
+    // now emit the compact JSON you wanted
+    const json = {
+      sunfire_enrollment_code: core.sunfireCode.value || mapd.enrollmentConfirmation || "PSRH325XC5",
+      medicare_number: core.coreMbi.value || mapd.medicareNumber || "6VW6CU9GD50",
+      policy_name: core.coreNewPlanName.value || mapd.newPlanName || "Humana Dual Integrated (HMO D-SNP) H0963-001-000",
+      plan_code: core.coreNewPlanCode.value || mapd.newPlan || "H0963-001-000",
+      old_plan_code: core.coreOldPlanCode.value || mapd.oldPlan || "H2354-025"
+    };
+
+    document.getElementById('jsonView').textContent = JSON.stringify(json, null, 2);
+  }
+
+  // initial json
+  buildCoreJson();
+</script>
+
+</body>
+</html>
